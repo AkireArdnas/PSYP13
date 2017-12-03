@@ -1,0 +1,366 @@
+####### Home assignment: Regression models #######
+
+library(car) #ncv
+library(psych) #for describe
+library(lsr) #b and beta
+library(lm.beta) #beta
+##############################################################
+####### Assignment 1 #######
+
+data1.pain <- read.csv("https://raw.githubusercontent.com/kekecsz/PSYP13_Data_analysis_class/master/home_sample_1.csv ")
+View(data1.pain)
+who(TRUE) #to check the class for each variable.
+
+### Check data set
+#Descriptive statistics
+describe(data1.pain)#mindfulness has a min value of -0.12. It should only have a range of 1-6.
+summary(data1.pain) # one participant has a value of 3 for variable "sex".
+which(data1.pain$mindfulness<1) #this shows that ID 24, 25 and 66 have values lower than 1
+#Histograms 
+hist(data1.pain$pain, breaks = 20, col = "lightgray")
+hist(data1.pain$age, breaks = 20, col = "lightgray")
+hist(data1.pain$STAI_trait, breaks = 20, col = "lightgray")
+hist(data1.pain$pain_cat, breaks = 20, col = "lightgray")
+hist(data1.pain$cortisol_serum, breaks = 20, col = "lightgray")
+hist(data1.pain$cortisol_saliva, breaks = 20, col = "lightgray")
+hist(data1.pain$mindfulness, breaks = 20, col = "lightgray", xlim = c(-1,6))
+#scatterplots
+plot(pain~age, data=data1.pain) 
+plot(pain~sex, data= data1.pain)
+plot(pain~STAI_trait, data= data1.pain)
+plot(pain~pain_cat, data= data1.pain)
+plot(pain~cortisol_serum, data= data1.pain)
+plot(pain~cortisol_saliva, data= data1.pain)
+plot(pain~mindfulness, data= data1.pain) 
+
+#Create a new data frame with row 15 (sex=3), 24, 25 and 66 (mindfulness<1) removed.
+data1.pain = data1.pain[-c(15, 24, 25, 66),]
+View(data1.pain)
+
+####### Two regression models
+model1.pain <- lm(pain~ age+sex, data=data1.pain) #submodel
+model2.pain <- lm(pain~age+sex+STAI_trait+pain_cat+cortisol_serum+cortisol_saliva+mindfulness, data=data1.pain)
+
+####### Model diagnostics
+
+#Check the model for influential outliers.
+plot(model2.pain, which = 4) #37, 46 and 112. 37 highest -about 0.06
+plot(model2.pain, which = 5) 
+cooks.distance(model2.pain)
+
+#Try to exclude case 37 with large Cooks distance and compare the result with the original model.
+lm(pain~age+sex+STAI_trait+pain_cat+cortisol_serum+cortisol_saliva+mindfulness, data=data1.pain, subset = -37)
+model2.pain
+  
+### Check assumptions of linear regression:
+#normality of residuals
+hist(residuals(model2.pain), breaks = 20)
+#QQplot
+plot(model2.pain, which = 2)
+#skew and kurtosis
+describe(residuals(model2.pain))
+
+#linearity
+#relationship between predicted and observed values
+pred2 <- predict(model2.pain)
+plot(pred2, data1.pain$pain)
+#predicted values against residuals 
+plot(model2.pain, which = 1)
+#linearity tests
+residualPlots(model2.pain)
+
+#Homogeneity of variance
+plot(model2.pain, which = 3)
+ncvTest(model2.pain) #non-significant
+
+#No excess multicollinearity
+vif(model2.pain) #vif over 3/5: cortisol_serum and saliva
+cor(data1.pain[,c(2,4,5,6,7,8,9)])
+pairs.panels(data1.pain[,c(2,4,5,6,7,8,9)], lm = TRUE)
+
+####### Refitting model 2 by excluding cortisol_saliva
+model2.pain <- lm(pain~age+sex+STAI_trait+pain_cat+cortisol_serum++mindfulness, data=data1.pain)
+
+## Model diagnostics for this new model
+#Check the model for influential outliers. Cook's distance.
+plot(model2.pain, which = 4) 
+plot(model2.pain, which = 5) 
+
+#### Check assumptions of linear regression:
+#normality of residuals
+hist(residuals(model2.pain), breaks = 20)
+#QQplot
+plot(model2.pain, which = 2)
+#skew and kurtosis
+describe(residuals(model2.pain))
+
+#linearity
+#relationship between predicted and observed values
+pred2 <- predict(model2.pain)
+plot(pred2, data1.pain$pain)
+#predicted values against residuals 
+plot(model2.pain, which = 1)
+#linearity tests
+residualPlots(model2.pain)
+
+#Homogeneity of variance
+plot(model2.pain, which = 3)
+ncvTest(model2.pain) #non-significant
+
+#No excess multicollinearity
+vif(model2.pain) 
+
+### model test statistics
+summary(model1.pain)
+summary(model2.pain)
+# b and beta
+standardCoefs(model1.pain)
+standardCoefs(model2.pain)
+# 95% confidence intervals
+confint(model1.pain)
+confint(model2.pain)
+
+####### model comparison
+#compare with anova
+anova(model1.pain, model2.pain)
+
+#compare with AIC
+AIC(model1.pain)
+AIC(model2.pain)
+
+
+
+#############################################################
+####### Assignment 2 ###########
+#Backward regression
+
+library(psych) # for describe
+library(car) #residualPlots
+
+#data frame: "data1.pain" from assignment 1
+data1.pain <- read.csv("https://raw.githubusercontent.com/kekecsz/PSYP13_Data_analysis_class/master/home_sample_1.csv ")
+data1.pain = data1.pain[-c(15, 24, 25, 66),]
+
+#Check data set. Weight has been added as a predictor.
+#Descriptive statistics
+describe(data1.pain)
+summary(data1.pain) 
+#Histogram
+hist(data1.pain$weight, breaks = 20, col = "lightgray")
+#scatterplot
+plot(pain~weight, data=data1.pain)
+
+# Full model with all the predictors
+full.model <- lm(pain~age+sex+weight+STAI_trait+pain_cat+mindfulness+cortisol_serum, data=data1.pain)
+
+####### Model diagnostics
+
+#Check the model for influential outliers. Cook's distance.
+plot(full.model, which = 4) 
+plot(full.model, which = 5)
+
+#Try to exclude case 37 with large Cooks distance
+lm(pain~age+sex+weight+STAI_trait+pain_cat+mindfulness+cortisol_serum, data=data1.pain, subset = -37)
+full.model
+
+### Check assumptions of linear regression:
+## normality of residuals
+hist(residuals(full.model), breaks = 20)
+#QQplot
+plot(full.model, which = 2)
+#skew and kurtosis
+describe(residuals(full.model))
+
+## Linearity
+#relationship between predicted and observed values
+pred.full <- predict(full.model)
+plot(pred.full, data1.pain$pain, xlab = "predicted", ylab = "observed")
+#predicted values against residuals 
+plot(full.model, which = 1)
+#linearity tests
+residualPlots(full.model) #non-significant
+
+## Homogeneity of variance
+plot(full.model, which = 3)
+ncvTest(full.model)  #non-significant
+
+## No excess multicollinearity
+vif(full.model) #no values over 3
+
+######## Backward regression
+full.model.back = step(full.model, direction = "backward")
+summary(full.model.back) 
+
+### Regression models. One from the backward regression and the other one based on theory (from assignment 1)
+backward.model <-lm(formula = pain ~ age + pain_cat + mindfulness + cortisol_serum, data = data1.pain)
+theorybased.model <- lm(pain~age+sex+STAI_trait+pain_cat+cortisol_serum++mindfulness, data=data1.pain)
+
+### model test statistics
+summary(backward.model)
+# b and beta
+standardCoefs(backward.model)
+# 95% confidence intervals
+confint(backward.model)
+
+
+### Compare the full model to the backward model
+# anova
+anova(backward.model, full.model) #non-significant
+#compare with AIC
+AIC(backward.model)
+AIC(full.model)
+
+### Compare the backward model to the theorybased model
+# anova
+anova(backward.model, theorybased.model) #non-significant
+#compare with AIC
+AIC(backward.model)
+AIC(theorybased.model)
+
+### New data set for testing
+test.data.pain <- data2.pain <- read.csv("https://raw.githubusercontent.com/kekecsz/PSYP13_Data_analysis_class/master/home_sample_2.csv")
+View(test.data.pain)
+
+### Test predictions on new data set
+pred.backward <- predict(backward.model, data2.pain) 
+pred.theory <- predict(theorybased.model, data2.pain)
+# Sum of squared differences
+SSdiff.backward <- sum((data2.pain["pain"] - pred.backward)^2) #observed minus fitted
+SSdiff.theory <- sum((data2.pain["pain"] - pred.theory)^2)
+SSdiff.backward #241.2981
+SSdiff.theory   #239.1571
+
+
+############################################################
+####### Assignment 3 #######
+
+library(psych)
+library(lme4) #lmer
+library(reshape2) #melt
+library(lsr)
+library(cAIC4) #cAIC
+library(ggplot2) #ggplot
+library(r2glmm) #r2beta
+library(influence.ME) #influence
+library(lattice) # qqmath
+
+data3.pain <- read.csv("https://raw.githubusercontent.com/kekecsz/PSYP13_Data_analysis_class/master/home_sample_3.csv")
+View(data3.pain)
+who(TRUE) #to check the class for each variable. ID and sex are factors.
+
+#repeated variables
+names(data3.pain)
+repeated.variables <- c("pain1", "pain2", "pain3", "pain4")
+
+##### Check the data #####
+describe(data3.pain)
+summary(data3.pain)
+#histograms
+hist(data3.pain$age, breaks = 20)
+hist(data3.pain$STAI_trait,breaks = 20)
+hist(data3.pain$pain_cat, breaks = 20)
+hist(data3.pain$cortisol_serum, breaks = 20)
+hist(data3.pain$cortisol_saliva, breaks = 20)
+hist(data3.pain$mindfulness,breaks = 20)
+hist(data3.pain$weight,breaks = 20) 
+hist(data3.pain$pain1,breaks = 20)
+hist(data3.pain$pain2,breaks = 20)
+hist(data3.pain$pain3,breaks = 20)
+hist(data3.pain$pain4,breaks = 20)
+
+### convert from wide to long format ###
+data3.long <- melt(data3.pain, measure.vars = repeated.variables, variable.name = "day", value.name = "pain")
+#order after ID
+data3.long = data3.long[order(data3.long[,"ID"]),]
+who(TRUE)
+# "day" as a numerical vector
+data3.long$day = as.numeric(data3.long$day)
+View(data3.long)
+
+### Analysis ###
+#random intercept model
+pain.intercept <- lmer(pain~age+sex+weight+STAI_trait+pain_cat+mindfulness+cortisol_serum+day+(1|ID), data = data3.long)
+#random slope and intercept model
+pain.slope <- lmer(pain~age+sex+weight+STAI_trait+pain_cat+mindfulness+cortisol_serum+day+(1+day|ID), data = data3.long)
+
+#summary
+summary(pain.intercept)
+summary(pain.slope)
+
+### Model comparison #####
+
+# predictions of each model
+data3.long$pred.int <- predict(pain.intercept)
+data3.long$pred.slope <- predict(pain.slope)
+## plot predictions (red line) against observed values (dots)
+# random intercept model
+ggplot(data3.long, aes(day, pain, group = ID))+
+  geom_point(size = 2)+
+  geom_line(color='red', aes(day, pred.int))+
+  facet_wrap("ID", ncol = 4)
+# random intercept and slope model
+ggplot(data3.long, aes(day, pain, group = ID))+
+  geom_point(size = 2)+
+  geom_line(color='red', aes( day, pred.slope))+
+  facet_wrap("ID", ncol = 4)
+
+## cAIC
+cAIC(pain.intercept)$caic 
+cAIC(pain.slope)$caic 
+
+##### A new model based on the random slope and intercept model with an added quadratic term of time.
+pain.quadratic <- lmer(pain~age+sex+weight+STAI_trait+pain_cat+mindfulness+cortisol_serum+day+I(day^2)+(1+day|ID), data = data3.long)
+
+
+##### Model diagnostics for quadratic model
+
+# influential outliers
+?influence
+influence(pain.quadratic, obs = T)$alt.fixed 
+
+### Assumptions
+
+# normality assumption
+# QQ plot
+qqmath(pain.quadratic, id=0.05) # this might require the lattice package, but you can get the same graph wit the qqnorm() function
+
+# linearity assumption
+# linearity of prediction and standardized residuals
+plot(pain.quadratic)
+
+# homogeneity of variance
+plot(pain.quadratic) #supposed to look for a "funnel (tratt) shape"
+
+# multicollinearity
+# correlation matrix
+quartz()
+pairs.panels(data3.long, col = "red", lm = T)
+
+# predictions of quadratic model
+data3.long$pred.quadratic <- predict(pain.quadratic)
+## plot of predictions against observed values.
+ggplot(data3.long, aes(day, pain, group = ID))+
+  geom_point(size = 2)+
+  geom_line(color='red', aes( day, pred.quadratic))+
+  facet_wrap("ID", ncol = 4)
+
+### summary
+summary(pain.quadratic)
+
+stdCoef.merMod <- function(object) {
+  sdy <- sd(getME(object,"y"))
+  sdx <- apply(getME(object,"X"), 2, sd)
+  sc <- fixef(object)*sdx/sdy
+  se.fixef <- coef(summary(object))[,"Std. Error"]
+  se <- se.fixef*sdx/sdy
+  return(data.frame(stdcoef=sc, stdse=se))
+}
+
+stdCoef.merMod(pain.quadratic)
+
+### R squared
+r2beta(pain.quadratic)
+
+
+
+
